@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Queimadas 2.0</title>
+    <link rel="stylesheet" href="/static/css/leaflet.css"/>
+    <!--[if lte IE 8]>
+      <link rel="stylesheet" href="/static/css/leaflet.ie.css" />
+  <![endif]-->
+    <link rel="stylesheet" href="/static/css/MarkerCluster.css"/>
+    <link rel="stylesheet" href="/static/css/MarkerCluster.Default.css"/>
+    <link rel="stylesheet" href="/static/css/L.Control.MousePosition.css"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <style type="text/css">
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        html, body, #map {
+            height: 100%;
+        }
+
+        .leaflet-container .leaflet-control-zoom {
+            margin-left: 13px;
+            margin-top: 70px;
+        }
+
+        #map {
+            z-index: 1;
+        }
+
+        #title {
+            z-index: 2;
+            position: absolute;
+            left: 10px;
+        }
+    </style>
+
+</head>
+<body>
+<div id="map"></div>
+<script src="/static/js/leaflet.js"></script>
+<script src="/static/js/leaflet.markercluster-src.js"></script>
+<script src="/static/js/jquery-2.1.4.min.js"></script>
+<script src="/static/js/L.Control.MousePosition.js"></script>
+<script src="/static/js/prettyprint.js"></script>
+<script>
+    var map = L.map('map', {
+        zoom: 4,
+        minZoom: 4,
+        center: [-15.8, -47.9]
+    });
+
+    var markerLayerGroup = L.layerGroup().addTo(map);
+    var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: 'Map data &copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    L.control.mousePosition().addTo(map);
+
+
+    function onEachFeature(feature, layer) {
+        var popupContent = prettyPrint(feature.properties);
+
+        layer.bindPopup(popupContent);
+
+    }
+
+
+    L.control.scale().addTo(map);
+    var camadaFocos = L.layerGroup();
+
+    L.control.layers({
+        'Open Street Maps': osmLayer
+    }, {
+        'Focos': camadaFocos
+    }).addTo(map);
+
+
+    bounds = map.getBounds();
+    url = "layer/within?" +
+            "layer=grade" +
+            "&geometry_column=geom" +
+            "&srid=4326" +
+            "&lat1=" + bounds.getSouthWest().lat +
+            "&lon1=" + bounds.getSouthWest().lng +
+            "&lat2=" + bounds.getNorthEast().lat +
+            "&lon2=" + bounds.getNorthEast().lng;
+
+
+    var layer_grade = L.geoJson(null, {
+        onEachFeature: onEachFeature
+    });
+    camadaFocos.addLayer(layer_grade);
+
+    $this = this;
+    $.getJSON(url, function (data) {
+        $this.layer_grade.addData(data);
+        $this.layer_grade.addTo(map);
+    });
+
+    url = "layer/within?" +
+            "layer=focos_julho_2015" +
+            "&geometry_column=geom" +
+            "&srid=4326" +
+            "&lat1=" + bounds.getSouthWest().lat +
+            "&lon1=" + bounds.getSouthWest().lng +
+            "&lat2=" + bounds.getNorthEast().lat +
+            "&lon2=" + bounds.getNorthEast().lng;
+
+
+    var layer_focos = L.geoJson(null, {
+        onEachFeature: onEachFeature,
+        pointToLayer: function (feature, latlng) {
+            return L.circleMarker(latlng, {
+                radius: 8,
+                fillColor: "#ff7800",
+                color: "#000",
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+            });
+        }
+    });
+    camadaFocos.addLayer(layer_focos);
+
+    $.getJSON(url, function (data) {
+        $this.layer_focos.addData(data);
+
+        var markers = L.markerClusterGroup();
+		markers.addLayer($this.layer_focos);
+
+		map.addLayer(markers);
+    });
+
+
+</script>
+</body>
+</html>
